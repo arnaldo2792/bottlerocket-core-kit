@@ -1,9 +1,12 @@
 use crate::hyper_proxy::{Proxy, ProxyConnector};
 use headers::Authorization;
-use hyper::client::HttpConnector;
 use hyper::Uri;
-use hyper_rustls::{HttpsConnector, HttpsConnectorBuilder};
+use hyper_rustls::HttpsConnector;
+use hyper_util::client::legacy::connect::dns::GaiResolver;
+use hyper_util::client::legacy::connect::HttpConnector;
+use rustls::crypto::CryptoProvider;
 use snafu::{ResultExt, Snafu};
+use std::sync::Arc;
 use url::Url;
 
 #[derive(Debug, Snafu)]
@@ -27,6 +30,8 @@ pub(super) enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 /// Setups a hyper-based HTTP client configured with a proxy connector.
+// TODO: in here, change setup_http_client to setup_http_connector, and use that function
+// in the http_connector method of the HttpClient trait
 pub(crate) fn setup_http_client<H, N>(
     https_proxy: H,
     no_proxy: Option<&[N]>,
@@ -90,12 +95,59 @@ where
         ));
     }
 
-    let https_connector = HttpsConnectorBuilder::new()
-        .with_native_roots()
-        .https_or_http()
-        .enable_http2()
-        .build();
+    let https_connector = make_tls(
+        GaiResolver::new(),
+        rustls::crypto::aws_lc_rs::default_provider(),
+    );
     let proxy_connector =
         ProxyConnector::from_proxy(https_connector, proxy).context(ProxyConnectorSnafu)?;
+
     Ok(proxy_connector)
+}
+
+pub(crate) fn make_tls<R>(
+    resolver: R,
+    crypto_provider: CryptoProvider,
+) -> hyper_rustls::HttpsConnector<HttpConnector<R>> {
+    use hyper_rustls::ConfigBuilderExt;
+    let mut base_connector = HttpConnector::new_with_resolver(resolver);
+    base_connector.enforce_http(false);
+    hyper_rustls::HttpsConnectorBuilder::new()
+               .with_tls_config(
+                rustls::ClientConfig::builder_with_provider(Arc::new(restrict_ciphers(crypto_provider)))
+                    .with_safe_default_protocol_versions()
+                    .expect("Error with the TLS configuration. Please file a bug report under https://github.com/smithy-lang/smithy-rs/issues.")
+                    .with_native_roots().expect("error with TLS configuration.")
+                    .with_no_client_auth()
+            )
+            .https_or_http()
+            .enable_http1()
+            .enable_http2()
+            .wrap_connector(base_connector)
+}
+
+fn restrict_ciphers(base: CryptoProvider) -> CryptoProvider {
+    let suites = &[
+        rustls::CipherSuite::TLS13_AES_256_GCM_SHA384,
+        rustls::CipherSuite::TLS13_AES_128_GCM_SHA256,
+        // TLS1.2 suites
+        rustls::CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+        rustls::CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+        rustls::CipherSuite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+        rustls::CipherSuite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+        rustls::CipherSuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+    ];
+    let supported_suites = suites
+        .iter()
+        .flat_map(|suite| {
+            base.cipher_suites
+                .iter()
+                .find(|s| &s.suite() == suite)
+                .cloned()
+        })
+        .collect::<Vec<_>>();
+    CryptoProvider {
+        cipher_suites: supported_suites,
+        ..base
+    }
 }

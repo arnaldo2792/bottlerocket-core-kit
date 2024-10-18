@@ -8,19 +8,22 @@ mod tunnel;
 use futures_util::future::TryFutureExt;
 use headers::{authorization::Credentials, Authorization, HeaderMapExt, ProxyAuthorization};
 use http::header::HeaderMap;
-use hyper::{service::Service, Uri};
+use hyper::Uri;
+use rustls_platform_verifier::Verifier;
 use std::{fmt, io, sync::Arc};
 use std::{
     future::Future,
     pin::Pin,
     task::{Context, Poll},
 };
+use tower_service::Service;
 
 pub use stream::ProxyStream;
 use tokio::io::{AsyncRead, AsyncWrite};
 
 use hyper_rustls::ConfigBuilderExt;
-use tokio_rustls::rustls::{ClientConfig, ServerName};
+use tokio_rustls::rustls::pki_types::ServerName;
+use tokio_rustls::rustls::ClientConfig;
 use tokio_rustls::TlsConnector;
 
 pub(crate) type BoxError = Box<dyn std::error::Error + Send + Sync>;
@@ -163,10 +166,11 @@ impl<C: fmt::Debug> fmt::Debug for ProxyConnector<C> {
 impl<C> ProxyConnector<C> {
     /// Create a new secured Proxies
     pub fn new(connector: C) -> Result<Self, io::Error> {
-        let config = ClientConfig::builder()
-            .with_safe_defaults()
-            .with_native_roots()
-            .with_no_client_auth();
+        let arc_crypto_provider =
+            std::sync::Arc::new(rustls::crypto::aws_lc_rs::default_provider());
+
+        let config =
+            rustls_platform_verifier::tls_config_with_provider(arc_crypto_provider).unwrap();
 
         let cfg = Arc::new(config);
         let tls = TlsConnector::from(cfg);
@@ -248,7 +252,7 @@ where
                         break match tls {
                             Some(tls) => {
                                 let server_name: ServerName =
-                                    mtry!(host.as_str().try_into().map_err(io_err));
+                                    mtry!(host.clone().try_into().map_err(io_err));
                                 let secure_stream = mtry!(tls
                                     .connect(server_name, tunnel_stream)
                                     .await

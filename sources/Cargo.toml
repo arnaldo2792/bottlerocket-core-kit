@@ -145,7 +145,7 @@ http = "0.2"
 httparse = "1"
 httptest = "0.15"
 hyper = { version = "0.14", default-features = false }
-hyper-rustls = { version = "0.24", default-features = false }
+hyper-rustls = { version = "0.27", default-features = false }
 hyper-unix-connector = "0.2"
 indexmap = "2"
 ipnet = "2"
@@ -188,7 +188,7 @@ tempfile = "3"
 test-case = "3"
 tokio = { version = "~1.32", default-features = false }  # LTS
 tokio-retry = "0.3"
-tokio-rustls = "0.24"
+tokio-rustls = "0.26"
 tokio-test = "0.4"
 tokio-tungstenite = { version = "0.20", default-features = false }
 tokio-util = "0.7"
