@@ -1,0 +1,11 @@
+[Unit]
+Description=List devices
+After=systemd-udevd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+StandardError=journal+console
+StandardOutput=journal+console
+ExecStart=ls -latr /dev/disk/by-partlabel/
+ExecStart=ls -latr /dev/disk/by-partuuid/

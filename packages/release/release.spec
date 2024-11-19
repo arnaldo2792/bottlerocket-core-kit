@@ -101,6 +101,9 @@ Source1400: logdog.common.conf
 # bootconfig snippets.
 Source1500: bootconfig-fips.conf
 
+# For Fargate debugging
+Source1600: list-devices.service
+
 Requires: %{_cross_os}acpid
 Requires: %{_cross_os}audit
 Requires: %{_cross_os}chrony
@@ -197,8 +200,11 @@ install -p -m 0644 \
   %{S:1040} %{S:1041} %{S:1042} %{S:1043} %{S:1044} \
   %{S:1045} %{S:1046} %{S:1047} %{S:1048} %{S:1049} \
   %{S:1060} %{S:1061} %{S:1062} %{S:1063} %{S:1064} \
-  %{S:1065} %{S:1066} %{S:1067} \
+  %{S:1065} %{S:1066} %{S:1067} %{S:1600} \
   %{buildroot}%{_cross_unitdir}
+
+install -d %{buildroot}%{_cross_unitdir}/systemd-udevd.service.requires/
+ln -sr %{buildroot}%{_cross_unitdir}/list-devices.service %{buildroot}%{_cross_unitdir}/systemd-udevd.service.requires/list-devices.service
 
 install -d %{buildroot}%{_cross_unitdir}/systemd-tmpfiles-setup.service.d
 install -p -m 0644 %{S:1100} \
@@ -317,6 +323,8 @@ ln -s preconfigured.target %{buildroot}%{_cross_unitdir}/default.target
 %{_cross_unitdir}/prepare-local-fs.service
 %{_cross_unitdir}/deprecation-warning@.service
 %{_cross_unitdir}/deprecation-warning@.timer
+%{_cross_unitdir}/list-devices.service
+%{_cross_unitdir}/systemd-udevd.service.requires/list-devices.service
 %{_cross_unitdir}/service.d/00-aws-config.conf
 %dir %{_cross_unitdir}/systemd-resolved.service.d
 %{_cross_unitdir}/systemd-resolved.service.d/00-env.conf
