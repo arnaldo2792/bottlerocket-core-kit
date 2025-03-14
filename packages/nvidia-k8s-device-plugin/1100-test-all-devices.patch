@@ -1,0 +1,27 @@
+From 1fb967856cb97fe8dc8200f5edb72a7bce04f284 Mon Sep 17 00:00:00 2001
+From: Arnaldo Garcia Rincon <agarrcia@amazon.com>
+Date: Fri, 14 Mar 2025 23:30:01 +0000
+Subject: [PATCH] test all devices
+
+---
+ internal/cdi/cdi.go | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/internal/cdi/cdi.go b/internal/cdi/cdi.go
+index fae421b..ed09cd4 100644
+--- a/internal/cdi/cdi.go
++++ b/internal/cdi/cdi.go
+@@ -124,6 +124,10 @@ func New(infolib info.Interface, nvmllib nvml.Interface, devicelib device.Interf
+ 		nvcdi.WithDeviceNamers(deviceNamer),
+ 		nvcdi.WithVendor(c.vendor),
+ 		nvcdi.WithClass("gpu"),
++		nvcdi.WithMergedDeviceOptions(
++			transform.WithName("all"),
++			transform.WithSkipIfExists(true),
++		),
+ 	)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("failed to create nvcdi library: %v", err)
+-- 
+2.47.0
+

@@ -18,6 +18,7 @@ Source2: nvidia-k8s-device-plugin-conf
 Source3: nvidia-k8s-device-plugin-exec-start-conf
 Source4: nvidia-k8s-device-plugin-mig-conf
 
+Patch1100: 1100-test-all-devices.patch
 
 BuildRequires: %{_cross_os}glibc-devel
 Requires: %{name}(binaries)

@@ -12,3 +12,9 @@ root = "/"
 path = "/usr/bin/nvidia-container-cli"
 environment = []
 ldconfig = "@/sbin/ldconfig"
+
+[nvidia-container-runtime]
+mode = "cdi"
+
+[nvidia-container-runtime.modes.cdi]
+default-kind = "k8s.device-plugin.nvidia.com/gpu"

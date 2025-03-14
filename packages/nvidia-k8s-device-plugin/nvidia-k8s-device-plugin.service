@@ -6,6 +6,7 @@ Wants=kubelet.service
 [Service]
 # Ensure that the kubelet device plugin socket exists before we start
 # A brief sleep is needed to avoid the `test` failing its first check
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/usr/libexec/nvidia/tesla/bin
 ExecStartPre=/usr/bin/sleep 0.1
 ExecStartPre=/usr/bin/test -S /var/lib/kubelet/device-plugins/kubelet.sock
 ExecStart=/usr/bin/nvidia-device-plugin --device-list-strategy volume-mounts --device-id-strategy index --pass-device-specs=true
